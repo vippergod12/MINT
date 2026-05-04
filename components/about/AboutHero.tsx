@@ -36,6 +36,30 @@ function beatOpacity(p: number, start: number, end: number, fade = 0.04) {
   return 1;
 }
 
+/**
+ * Biến thể của beatOpacity: hiển thị full opacity ngay từ p=0,
+ * chỉ fade-out khi gần `end`. Dùng cho beat đầu tiên để khi user
+ * vừa load trang đã thấy nội dung, không bị "màn hình trống".
+ */
+function beatOpacityNoFadeIn(p: number, end: number, fade = 0.04) {
+  if (p >= end) return 0;
+  const holdEnd = end - fade;
+  if (p > holdEnd) return clamp(1 - (p - holdEnd) / fade);
+  return 1;
+}
+
+/**
+ * Biến thể của beatOpacity: fade-in từ `start`, giữ full opacity
+ * tới khi rời khỏi stage. Dùng cho beat cuối để khi cuộn tới đáy
+ * không bị "màn hình trống" trước khi vào Footer.
+ */
+function beatOpacityNoFadeOut(p: number, start: number, fade = 0.04) {
+  if (p <= start) return 0;
+  const peak = start + fade;
+  if (p < peak) return clamp((p - start) / fade);
+  return 1;
+}
+
 const PILLARS = [
   { mark: '◇\uFE0E', title: 'Eco-friendly', body: 'Vải không dệt phân huỷ tự nhiên, thay nilon dùng 1 lần' },
   { mark: '◆\uFE0E', title: 'Made in VN', body: 'Sản xuất trực tiếp tại xưởng TP.HCM, không qua trung gian' },
@@ -70,12 +94,14 @@ const DIFFS = [
      không hydrate mismatch và stable mỗi reload
    ============================================================ */
 
-const LEAF_COUNT = 28;
+const LEAF_COUNT = 40;
 
 /**
- * 8 sprite lá đã được cắt sẵn từ ảnh nguồn (xem scripts/extract-leaves.py).
- * leaf-8 là chiếc lá lớn, sắc nét nhất (từ ảnh single-leaf nền đen),
- * 7 chiếc còn lại có dáng & góc xoay khác nhau cho đa dạng.
+ * 23 sprite lá đã được cắt sẵn từ 3 ảnh nguồn (xem scripts/extract-leaves.py):
+ *  - leaf-1 → leaf-7: ảnh nền trắng nhiều lá nhỏ
+ *  - leaf-8:          1 lá phong lớn sắc nét nền đen
+ *  - leaf-9 → leaf-23: 15 lá phong/lá rụng đa dạng nền xám (đỏ, cam, vàng,
+ *    nâu, lá phong, lá sồi, lá thường xuân… dáng và màu rất phong phú)
  */
 const LEAF_SPRITES = [
   '/leaves/leaf-1.png',
@@ -86,6 +112,21 @@ const LEAF_SPRITES = [
   '/leaves/leaf-6.png',
   '/leaves/leaf-7.png',
   '/leaves/leaf-8.png',
+  '/leaves/leaf-9.png',
+  '/leaves/leaf-10.png',
+  '/leaves/leaf-11.png',
+  '/leaves/leaf-12.png',
+  '/leaves/leaf-13.png',
+  '/leaves/leaf-14.png',
+  '/leaves/leaf-15.png',
+  '/leaves/leaf-16.png',
+  '/leaves/leaf-17.png',
+  '/leaves/leaf-18.png',
+  '/leaves/leaf-19.png',
+  '/leaves/leaf-20.png',
+  '/leaves/leaf-21.png',
+  '/leaves/leaf-22.png',
+  '/leaves/leaf-23.png',
 ];
 
 /** Pseudo-random deterministic theo (i, salt). Trả về [0, 1). */
@@ -169,11 +210,16 @@ export default function AboutHero() {
     };
   }, []);
 
-  const b1 = beatOpacity(progress, 0.0, 0.2, 0.04);
-  const b2 = beatOpacity(progress, 0.18, 0.4, 0.04);
-  const b3 = beatOpacity(progress, 0.38, 0.62, 0.04);
-  const b4 = beatOpacity(progress, 0.6, 0.83, 0.04);
-  const b5 = beatOpacity(progress, 0.81, 1.0, 0.04);
+  // Beat 1 (mở đầu) hiện full ngay khi load trang → user thấy hero
+  // và biết cần cuộn xuống. Beat 5 (CTA) giữ full opacity tới hết stage
+  // → không có "màn hình trống" trước khi qua Footer.
+  // Beat 1 chiếm chỉ ~12% (≈60vh scroll) để chuyển nhanh sang Khởi nguồn,
+  // các beat còn lại chia đều ~22-25% mỗi beat.
+  const b1 = beatOpacityNoFadeIn(progress, 0.12, 0.04);
+  const b2 = beatOpacity(progress, 0.1, 0.32, 0.04);
+  const b3 = beatOpacity(progress, 0.3, 0.55, 0.04);
+  const b4 = beatOpacity(progress, 0.53, 0.78, 0.04);
+  const b5 = beatOpacityNoFadeOut(progress, 0.76, 0.04);
 
   const ty = (op: number) => (1 - op) * 24;
   const tyUp = (op: number) => (1 - op) * -24;
@@ -281,8 +327,8 @@ export default function AboutHero() {
           </h2>
           <div className="about-beat-pillars">
             {PILLARS.map((p, i) => {
-              const localStart = 0.4 + i * 0.015;
-              const op = beatOpacity(progress, localStart, 0.62, 0.025);
+              const localStart = 0.32 + i * 0.015;
+              const op = beatOpacity(progress, localStart, 0.55, 0.025);
               return (
                 <div
                   key={p.title}
@@ -317,8 +363,8 @@ export default function AboutHero() {
           </h2>
           <ul className="about-beat-diffs">
             {DIFFS.map((d, i) => {
-              const localStart = 0.62 + i * 0.025;
-              const op = beatOpacity(progress, localStart, 0.83, 0.025);
+              const localStart = 0.55 + i * 0.025;
+              const op = beatOpacity(progress, localStart, 0.78, 0.025);
               return (
                 <li
                   key={d.title}

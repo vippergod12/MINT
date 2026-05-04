@@ -5014,7 +5014,7 @@ input[type="reset"]:disabled,
    ============================================================ */
 .about-stage {
   position: relative;
-  height: 600vh;
+  height: 500vh;
   background: #0d2820;
 }
 .about-stage-sticky {
@@ -5125,6 +5125,8 @@ input[type="reset"]:disabled,
 .about-beat-right {
   align-items: flex-end;
   text-align: right;
+  /* chừa khoảng trống cho cột progress dots + label "KHÁC BIỆT" bên phải */
+  padding-right: clamp(140px, 14vw, 200px);
 }
 
 .about-beat-eyebrow {
@@ -5246,40 +5248,44 @@ input[type="reset"]:disabled,
   padding: 0;
   display: grid;
   gap: 22px;
-  max-width: 460px;
+  max-width: 520px;
   width: 100%;
 }
 .about-beat-diffs li {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 18px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  gap: 6px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
   will-change: opacity, transform;
 }
 .about-beat-diffs li:last-child {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 .about-diff-eyebrow {
   font-family: var(--font-numeric);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--gold-soft);
 }
 .about-beat-diffs strong {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: clamp(22px, 2vw, 26px);
   font-weight: 500;
+  line-height: 1.25;
   color: #fff;
-  margin-top: 4px;
+  margin-top: 6px;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
 }
 .about-beat-diffs span:last-child {
   font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(15px, 1.1vw, 17px);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.88);
+  margin-top: 4px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 }
 
 /* ---- Beat 5: CTA buttons ---- */
@@ -5386,33 +5392,34 @@ input[type="reset"]:disabled,
 .about-stage-hint {
   position: absolute;
   left: 50%;
-  bottom: 32px;
+  bottom: 28px;
   transform: translateX(-50%);
   z-index: 12;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.95);
   font-family: var(--font-body);
-  font-size: 10px;
-  letter-spacing: 4px;
-  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: 7px;
+  font-weight: 700;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
   will-change: opacity;
 }
 .about-stage-hint-line {
   display: block;
-  width: 1px;
-  height: 36px;
+  width: 2px;
+  height: 64px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.95) 0%,
     transparent 100%
   );
   animation: aboutScrollPulse 1.6s ease-in-out infinite;
 }
 @keyframes aboutScrollPulse {
-  0%, 100% { transform: scaleY(0.6); transform-origin: top; opacity: 0.4; }
+  0%, 100% { transform: scaleY(0.6); transform-origin: top; opacity: 0.5; }
   50%      { transform: scaleY(1);   transform-origin: top; opacity: 1; }
 }
 
@@ -5424,6 +5431,8 @@ input[type="reset"]:disabled,
   .about-beat-pillars { grid-template-columns: repeat(2, 1fr); max-width: 520px; }
   .about-stage-dots { right: 16px; gap: 14px; }
   .about-stage-dot-label { display: none; }
+  /* Tablet trở xuống ẩn label nên không cần chừa khoảng cho beat-right */
+  .about-beat-right { padding-right: clamp(50px, 6vw, 80px); }
 }
 
 @media (max-width: 768px) {
@@ -5435,6 +5444,7 @@ input[type="reset"]:disabled,
     align-items: center;
     text-align: center;
   }
+  .about-beat-right { padding-right: 22px; }
   .about-beat-left .about-beat-quote {
     border-left: 0;
     border-top: 2px solid var(--gold-soft);

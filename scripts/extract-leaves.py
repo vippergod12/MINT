@@ -1,11 +1,13 @@
 """
-Cắt từng chiếc lá phong từ 2 ảnh nguồn → PNG trong suốt → lưu vào public/leaves/.
+Cắt từng chiếc lá phong từ các ảnh nguồn → PNG trong suốt → lưu vào public/leaves/.
 
 Workflow:
-  1. Đọc 2 ảnh nguồn (1 ảnh có nhiều lá nền trắng, 1 ảnh single-leaf nền đen).
+  1. Đọc các ảnh nguồn (ảnh nhiều lá nền trắng, ảnh single-leaf nền đen,
+     ảnh nhiều lá nền xám sáng RGB ~229).
   2. Tạo alpha mask:
-     - Ảnh nền trắng: pixel càng sáng càng trong suốt (anti-alias mềm).
-     - Ảnh nền đen: pixel càng tối càng trong suốt.
+     - Nền trắng: pixel càng sáng càng trong suốt.
+     - Nền đen:   pixel càng tối càng trong suốt.
+     - Nền xám:   pixel càng gần màu nền càng trong suốt (theo dist Euclid).
   3. Find connected components của vùng opaque, lọc bỏ noise nhỏ.
   4. Crop bbox + padding cho từng lá → resize về max 256px → lưu PNG.
 """
@@ -28,6 +30,10 @@ SRC_WHITE = (
 SRC_BLACK = (
     ASSETS
     / "c__Users_sater_AppData_Roaming_Cursor_User_workspaceStorage_e43a7d8a6e5c05673014b123db3d7fd8_images_image-74a2912a-8cd8-4765-9d87-73e4719ac8b2.png"
+)
+SRC_GREY = (
+    ASSETS
+    / "c__Users_sater_AppData_Roaming_Cursor_User_workspaceStorage_e43a7d8a6e5c05673014b123db3d7fd8_images_image-3f231f76-3e01-4ff5-9838-a27bc52c3f4c.png"
 )
 OUT_DIR = ROOT / "public" / "leaves"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -57,6 +63,26 @@ def alpha_from_black_bg(img: Image.Image) -> Image.Image:
     return Image.fromarray(rgba, "RGBA")
 
 
+def alpha_from_grey_bg(
+    img: Image.Image,
+    bg: tuple[int, int, int] = (229, 229, 229),
+) -> Image.Image:
+    """Loại bỏ nền xám đồng đều → alpha PNG.
+
+    Pixel càng gần `bg` (Euclid distance trong RGB) càng trong suốt.
+    Phù hợp cho ảnh studio chụp nhiều lá xếp lưới trên nền xám sáng.
+    """
+    arr = np.array(img.convert("RGB"), dtype=np.int32)
+    bg_arr = np.array(bg, dtype=np.int32)
+    diff = arr - bg_arr  # (H, W, 3)
+    dist = np.sqrt((diff * diff).sum(axis=2))  # 0 = đúng màu nền
+    # Sát nền (dist <= 12) → alpha 0
+    # Lá rõ (dist >= 55) → alpha 255
+    alpha = np.clip((dist - 12) * (255 / 43), 0, 255).astype(np.uint8)
+    rgba = np.dstack([arr.astype(np.uint8), alpha])
+    return Image.fromarray(rgba, "RGBA")
+
+
 def smooth_alpha(img: Image.Image, radius: float = 0.6) -> Image.Image:
     """Làm mượt rìa alpha bằng Gaussian blur nhẹ trên kênh alpha."""
     r, g, b, a = img.split()
@@ -70,12 +96,23 @@ def extract_components(
     min_area: int,
     pad: int,
     alpha_threshold: int = 32,
+    open_iters: int = 0,
+    max_aspect: float = 2.2,
 ) -> list[Image.Image]:
-    """Tìm connected components của vùng opaque, crop từng cái + padding."""
+    """Tìm connected components của vùng opaque, crop từng cái + padding.
+
+    - `open_iters` > 0: erosion+dilation trước khi label, dùng để tách 2 lá
+      dính nhau bằng cuống/bóng mảnh (chỉ dùng cho ảnh có nhiều lá xếp gần).
+    - `max_aspect`: bỏ component có tỉ lệ bbox dài/rộng vượt ngưỡng (tránh
+      cụm 2-3 lá dính dọc/ngang được coi như 1 sprite — nhìn rơi sẽ kỳ).
+    """
     arr = np.array(rgba)
     mask = arr[:, :, 3] >= alpha_threshold
     # Đóng hở nhỏ để các thuỳ lá liên kết chắc chắn
     mask = ndimage.binary_closing(mask, iterations=2)
+    if open_iters > 0:
+        # Mở (erosion → dilation) để bẻ gãy cuống/bóng mảnh nối 2 lá
+        mask = ndimage.binary_opening(mask, iterations=open_iters)
     labeled, n = ndimage.label(mask)
     print(f"  → {n} component(s) tìm thấy")
     crops: list[Image.Image] = []
@@ -86,8 +123,13 @@ def extract_components(
             continue
         y0, y1 = max(int(ys.min()) - pad, 0), min(int(ys.max()) + pad + 1, arr.shape[0])
         x0, x1 = max(int(xs.min()) - pad, 0), min(int(xs.max()) + pad + 1, arr.shape[1])
+        bw, bh = x1 - x0, y1 - y0
+        aspect = max(bw, bh) / max(min(bw, bh), 1)
+        if aspect > max_aspect:
+            print(f"    skip #{i}: aspect={aspect:.2f} > {max_aspect} (cluster lá dính)")
+            continue
         crop = rgba.crop((x0, y0, x1, y1))
-        # Lọc thêm: chỉ lấy crop có alpha lớn nhất chiếm > 30% bbox (loại nhiễu lẻ tẻ)
+        # Lọc thêm: chỉ lấy crop có vùng opaque đủ dày (loại nhiễu lẻ tẻ)
         ca = np.array(crop)[:, :, 3]
         if (ca >= alpha_threshold).mean() < 0.08:
             continue
@@ -108,21 +150,37 @@ def main() -> None:
     print(f"Output: {OUT_DIR}")
 
     # ====== Ảnh 1: nhiều lá nền trắng/trong suốt ======
-    print(f"\n[1/2] {SRC_WHITE.name}")
+    print(f"\n[1/3] {SRC_WHITE.name}")
     src1 = Image.open(SRC_WHITE)
     rgba1 = alpha_from_white_bg(src1)
     rgba1 = smooth_alpha(rgba1, radius=0.5)
     crops1 = extract_components(rgba1, min_area=2500, pad=8)
 
     # ====== Ảnh 2: 1 lá đẹp nền đen ======
-    print(f"\n[2/2] {SRC_BLACK.name}")
+    print(f"\n[2/3] {SRC_BLACK.name}")
     src2 = Image.open(SRC_BLACK)
     rgba2 = alpha_from_black_bg(src2)
     rgba2 = smooth_alpha(rgba2, radius=0.7)
     crops2 = extract_components(rgba2, min_area=8000, pad=12, alpha_threshold=40)
 
+    # ====== Ảnh 3: 15 lá xếp lưới nền xám RGB(229) ======
+    print(f"\n[3/3] {SRC_GREY.name}")
+    src3 = Image.open(SRC_GREY)
+    rgba3 = alpha_from_grey_bg(src3, bg=(229, 229, 229))
+    rgba3 = smooth_alpha(rgba3, radius=0.6)
+    # min_area cao hơn vì lá ở ảnh này khá to. Dùng open_iters=2 để bẻ
+    # cuống/bóng mảnh nối các lá liền kề (15 lá xếp lưới khá khít).
+    crops3 = extract_components(
+        rgba3,
+        min_area=4000,
+        pad=10,
+        alpha_threshold=36,
+        open_iters=2,
+        max_aspect=1.7,
+    )
+
     # ====== Ghi ra disk ======
-    all_crops = crops1 + crops2
+    all_crops = crops1 + crops2 + crops3
     for f in OUT_DIR.glob("leaf-*.png"):
         f.unlink()
     saved = 0
