@@ -53,9 +53,9 @@ export default function HeroEditorial({ categories, products, hero, loading }: P
     <section className="hero-editorial">
       <div className="container hero-edit-grid">
         <div className="hero-edit-meta">
-          <span className="hero-edit-tag">● Bảng giá mới {time.getFullYear()}</span>
+          <span className="hero-edit-tag">● Nhà sản xuất &amp; phân phối — 12 năm</span>
           <span className="hero-edit-date">{monthYear}</span>
-          <span className="hero-edit-loc">VN — Giao toàn quốc</span>
+          <span className="hero-edit-loc">VN — Giao 63/63 tỉnh thành</span>
         </div>
 
         <div className="hero-edit-headline">

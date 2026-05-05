@@ -1,8 +1,10 @@
 import { fetchHome } from '@/lib/data';
 import HeroEditorial from '@/components/home/HeroEditorial';
 import Marquee from '@/components/home/Marquee';
+import ManufacturerTrust from '@/components/home/ManufacturerTrust';
 import HotBento from '@/components/home/HotBento';
 import TrendingGrid from '@/components/home/TrendingGrid';
+import ProcessFlow from '@/components/home/ProcessFlow';
 import StorySection from '@/components/home/StorySection';
 import BigCTA from '@/components/home/BigCTA';
 import CategoryStripLazy from '@/components/home/CategoryStripLazy';
@@ -46,6 +48,10 @@ export default async function HomePage() {
       <HeroEditorial categories={categories} products={products} hero={hero} />
       <Marquee />
 
+      {/* TRUST BLOCK: khẳng định "nhà sản xuất + phân phối trực tiếp" ngay sau
+          Marquee — gia tăng độ tin cậy trước khi user xem sản phẩm. */}
+      <ManufacturerTrust />
+
       {/* BELOW-THE-FOLD - SEO-critical (sản phẩm hot): SSR thẳng giữ Google index */}
       <HotBento products={hotProducts} />
 
@@ -54,6 +60,11 @@ export default async function HomePage() {
 
       {/* TrendingGrid: SSR 8 sản phẩm đầu cho SEO + LCP, client mở thêm theo nút. */}
       <TrendingGrid products={products} />
+
+      {/* PROCESS FLOW: minh hoạ quy trình 5 bước từ báo giá đến giao hàng */}
+      <LazyMount minHeight={520} rootMargin="500px">
+        <ProcessFlow />
+      </LazyMount>
 
       {/* Section trang trí dưới cùng → mount on scroll, save initial DOM/CSS work */}
       <LazyMount minHeight={420} rootMargin="500px">

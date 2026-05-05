@@ -48,7 +48,7 @@ export async function fetchHome(): Promise<HomeBundle> {
     sql`
       SELECT p.id, p.category_id, p.name, p.slug, p.price,
              p.sale_price, p.sale_end_at,
-             p.image_url, p.colors,
+             p.image_url, p.images, p.colors,
              p.is_active, p.is_hero, p.featured_rank,
              p.created_at, p.updated_at,
              c.name AS category_name, c.slug AS category_slug
@@ -60,7 +60,7 @@ export async function fetchHome(): Promise<HomeBundle> {
     sql`
       SELECT p.id, p.category_id, p.name, p.slug, p.price,
              p.sale_price, p.sale_end_at,
-             p.image_url, p.colors,
+             p.image_url, p.images, p.colors,
              p.is_active, p.featured_rank,
              p.created_at, p.updated_at,
              c.name AS category_name, c.slug AS category_slug
@@ -73,7 +73,7 @@ export async function fetchHome(): Promise<HomeBundle> {
     sql`
       SELECT p.id, p.category_id, p.name, p.slug, p.price,
              p.sale_price, p.sale_end_at,
-             p.image_url, p.colors,
+             p.image_url, p.images, p.colors,
              p.is_active, p.is_hero, p.featured_rank,
              p.created_at, p.updated_at,
              c.name AS category_name, c.slug AS category_slug
@@ -133,7 +133,7 @@ export async function fetchProducts(
   const rows = await sql`
     SELECT p.id, p.category_id, p.name, p.slug, p.price,
            p.sale_price, p.sale_end_at,
-           p.image_url, p.colors,
+           p.image_url, p.images, p.colors,
            p.is_active, p.is_hero, p.featured_rank,
            p.created_at, p.updated_at,
            c.name AS category_name, c.slug AS category_slug
@@ -152,7 +152,7 @@ export async function fetchProductDetail(slug: string): Promise<ProductDetailBun
   const rows = (await sql`
     SELECT p.id, p.category_id, p.name, p.slug, p.description, p.price,
            p.sale_price, p.sale_end_at,
-           p.image_url, p.colors,
+           p.image_url, p.images, p.colors,
            p.is_active, p.is_hero, p.featured_rank,
            p.created_at, p.updated_at,
            c.name AS category_name, c.slug AS category_slug
@@ -168,7 +168,7 @@ export async function fetchProductDetail(slug: string): Promise<ProductDetailBun
     sql`
       SELECT p.id, p.category_id, p.name, p.slug, p.price,
              p.sale_price, p.sale_end_at,
-             p.image_url, p.colors,
+             p.image_url, p.images, p.colors,
              p.is_active, p.is_hero, p.featured_rank,
              p.created_at, p.updated_at,
              c.name AS category_name, c.slug AS category_slug
@@ -182,7 +182,7 @@ export async function fetchProductDetail(slug: string): Promise<ProductDetailBun
     sql`
       SELECT p.id, p.category_id, p.name, p.slug, p.price,
              p.sale_price, p.sale_end_at,
-             p.image_url, p.colors,
+             p.image_url, p.images, p.colors,
              p.is_active, p.featured_rank,
              p.created_at, p.updated_at,
              c.name AS category_name, c.slug AS category_slug

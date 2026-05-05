@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   const rows = await sql`
     SELECT p.id, p.category_id, p.name, p.slug, p.price,
            p.sale_price, p.sale_end_at,
-           p.image_url, p.colors,
+           p.image_url, p.images, p.colors,
            p.is_active, p.is_hero, p.featured_rank,
            p.created_at, p.updated_at,
            c.name AS category_name, c.slug AS category_slug
@@ -52,6 +52,34 @@ export async function GET(req: NextRequest) {
   });
 }
 
+/**
+ * Chuẩn hoá danh sách ảnh từ body:
+ *   - Nhận `images` (mảng) hoặc fallback `image_url` (1 chuỗi) để tương thích
+ *     client cũ hoặc seed/import.
+ *   - Lọc rỗng, dedupe theo nội dung; tối đa MAX_IMAGES ảnh / sản phẩm.
+ */
+const MAX_IMAGES = 10;
+
+function normalizeImages(input: {
+  images?: unknown;
+  image_url?: string | null;
+}): string[] {
+  const list: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: unknown) => {
+    if (typeof raw !== 'string') return;
+    const v = raw.trim();
+    if (!v) return;
+    if (seen.has(v)) return;
+    seen.add(v);
+    list.push(v);
+  };
+  if (Array.isArray(input.images)) input.images.forEach(push);
+  // Nếu body chỉ có image_url cũ (legacy) → đưa vào đầu mảng.
+  if (list.length === 0 && input.image_url) push(input.image_url);
+  return list.slice(0, MAX_IMAGES);
+}
+
 export async function POST(req: NextRequest) {
   if (!getAdminFromRequest(req)) return unauthorized();
 
@@ -63,6 +91,7 @@ export async function POST(req: NextRequest) {
     sale_price?: number | string | null;
     sale_end_at?: string | null;
     image_url?: string;
+    images?: unknown;
     category_id?: number | string;
     is_active?: boolean;
     colors?: unknown;
@@ -95,21 +124,23 @@ export async function POST(req: NextRequest) {
   const saleEndIso = saleEndAt ? saleEndAt.toISOString() : null;
 
   const colors = parseStringArray(body.colors);
+  const images = normalizeImages(body);
+  const cover = images[0] ?? null;
   const slug = (body.slug && body.slug.trim()) || slugify(name);
   const isActive = body.is_active ?? true;
 
   try {
     const rows = (await sql`
       INSERT INTO products (category_id, name, slug, description, price,
-                            sale_price, sale_end_at, image_url,
+                            sale_price, sale_end_at, image_url, images,
                             colors, is_active)
       VALUES (${categoryId}, ${name}, ${slug}, ${body.description ?? null}, ${price},
               ${salePrice}, ${saleEndIso},
-              ${body.image_url ?? null},
+              ${cover}, ${images}::text[],
               ${colors}::text[], ${isActive})
       RETURNING id, category_id, name, slug, description, price,
                 sale_price, sale_end_at,
-                image_url, colors,
+                image_url, images, colors,
                 is_active, is_hero, featured_rank,
                 created_at, updated_at
     `) as Record<string, unknown>[];

@@ -61,7 +61,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
   const rows = (await sql`
     SELECT p.id, p.category_id, p.name, p.slug, p.description, p.price,
            p.sale_price, p.sale_end_at,
-           p.image_url, p.colors,
+           p.image_url, p.images, p.colors,
            p.is_active, p.is_hero, p.featured_rank,
            p.created_at, p.updated_at,
            c.name AS category_name, c.slug AS category_slug
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
     ? sql`
         SELECT p.id, p.category_id, p.name, p.slug, p.price,
                p.sale_price, p.sale_end_at,
-               p.image_url, p.colors,
+               p.image_url, p.images, p.colors,
                p.is_active, p.is_hero, p.featured_rank,
                p.created_at, p.updated_at,
                c.name AS category_name, c.slug AS category_slug
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
     ? sql`
         SELECT p.id, p.category_id, p.name, p.slug, p.price,
                p.sale_price, p.sale_end_at,
-               p.image_url, p.colors,
+               p.image_url, p.images, p.colors,
                p.is_active, p.featured_rank,
                p.created_at, p.updated_at,
                c.name AS category_name, c.slug AS category_slug
@@ -130,6 +130,27 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
   );
 }
 
+const MAX_IMAGES = 10;
+
+function normalizeImages(input: {
+  images?: unknown;
+  image_url?: string | null;
+}): string[] {
+  const list: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: unknown) => {
+    if (typeof raw !== 'string') return;
+    const v = raw.trim();
+    if (!v) return;
+    if (seen.has(v)) return;
+    seen.add(v);
+    list.push(v);
+  };
+  if (Array.isArray(input.images)) input.images.forEach(push);
+  if (list.length === 0 && input.image_url) push(input.image_url);
+  return list.slice(0, MAX_IMAGES);
+}
+
 export async function PUT(req: NextRequest, ctx: RouteCtx) {
   if (!getAdminFromRequest(req)) return unauthorized();
   const ident = parseIdent(ctx.params.id);
@@ -143,6 +164,7 @@ export async function PUT(req: NextRequest, ctx: RouteCtx) {
     sale_price?: number | string | null;
     sale_end_at?: string | null;
     image_url?: string | null;
+    images?: unknown;
     category_id?: number | string;
     is_active?: boolean;
     colors?: unknown;
@@ -162,6 +184,8 @@ export async function PUT(req: NextRequest, ctx: RouteCtx) {
   const sale = parseSale(body);
   if (sale.error) return badRequest(sale.error);
   const colors = parseStringArray(body.colors);
+  const images = normalizeImages(body);
+  const cover = images[0] ?? null;
   const slug = (body.slug && body.slug.trim()) || slugify(name);
   const isActive = body.is_active ?? true;
 
@@ -174,7 +198,8 @@ export async function PUT(req: NextRequest, ctx: RouteCtx) {
         price = ${price},
         sale_price = ${sale.salePrice},
         sale_end_at = ${sale.saleEndAt},
-        image_url = ${body.image_url ?? null},
+        image_url = ${cover},
+        images = ${images}::text[],
         colors = ${colors}::text[],
         is_active = ${isActive},
         updated_at = NOW()
@@ -182,7 +207,7 @@ export async function PUT(req: NextRequest, ctx: RouteCtx) {
        OR (${ident.slug ?? null}::text IS NOT NULL AND slug = ${ident.slug ?? null}::text)
     RETURNING id, category_id, name, slug, description, price,
               sale_price, sale_end_at,
-              image_url, colors,
+              image_url, images, colors,
               is_active, is_hero, featured_rank,
               created_at, updated_at
   `) as Record<string, unknown>[];
@@ -213,7 +238,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
        OR (${ident.slug ?? null}::text IS NOT NULL AND slug = ${ident.slug ?? null}::text)
     RETURNING id, category_id, name, slug, description, price,
               sale_price, sale_end_at,
-              image_url, colors,
+              image_url, images, colors,
               is_active, is_hero, featured_rank,
               created_at, updated_at
   `) as Record<string, unknown>[];

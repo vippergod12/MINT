@@ -362,10 +362,12 @@ async function main() {
   ];
 
   for (const p of products) {
+    // Seed mỗi sản phẩm với 1 ảnh — admin có thể thêm ảnh khác qua UI sau.
     await sql`
-      INSERT INTO products (category_id, name, slug, description, price, sale_price, sale_end_at, image_url)
+      INSERT INTO products (category_id, name, slug, description, price, sale_price, sale_end_at, image_url, images)
       SELECT c.id, ${p.name}, ${p.slug}, ${p.description}, ${p.price},
-             ${p.sale_price ?? null}, ${p.sale_end_at ?? null}, ${p.image_url}
+             ${p.sale_price ?? null}, ${p.sale_end_at ?? null},
+             ${p.image_url}, ARRAY[${p.image_url}]::text[]
       FROM categories c
       WHERE c.slug = ${p.category_slug}
       ON CONFLICT (slug) DO UPDATE SET
@@ -375,6 +377,10 @@ async function main() {
         sale_price = EXCLUDED.sale_price,
         sale_end_at = EXCLUDED.sale_end_at,
         image_url = EXCLUDED.image_url,
+        images = CASE
+          WHEN cardinality(products.images) <= 1 THEN EXCLUDED.images
+          ELSE products.images
+        END,
         updated_at = NOW()
     `;
   }

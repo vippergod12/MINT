@@ -67,6 +67,14 @@ export function productJsonLd(product: Product): Record<string, unknown> {
     ? 'https://schema.org/InStock'
     : 'https://schema.org/OutOfStock';
 
+  // Liệt kê toàn bộ ảnh gallery cho rich results; fallback về image_url đơn
+  // cho dữ liệu cũ chưa có cột `images`.
+  const allImages = Array.isArray(product.images) && product.images.length > 0
+    ? product.images
+    : product.image_url
+      ? [product.image_url]
+      : [];
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -75,7 +83,7 @@ export function productJsonLd(product: Product): Record<string, unknown> {
     description:
       product.description?.trim() ||
       `${product.name} — ${product.category_name ?? 'Sản phẩm'} tại ${SITE_NAME}.`,
-    image: product.image_url ? [absoluteUrl(product.image_url)] : [],
+    image: allImages.map((src) => absoluteUrl(src)),
     sku: `TS-${product.id}`,
     category: product.category_name ?? undefined,
     brand: { '@type': 'Brand', name: SITE_NAME },

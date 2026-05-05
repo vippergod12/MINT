@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { fetchProductDetail } from '@/lib/data';
 import { formatVnd } from '@/lib/utils/format';
@@ -8,6 +7,7 @@ import { getSaleInfo } from '@/lib/utils/sale';
 import { SaleBadge } from '@/components/SaleBadge';
 import ProductCarousel from '@/components/ProductCarousel';
 import ProductDetailCta from './ProductDetailCta';
+import ProductGallery from './ProductGallery';
 import { breadcrumbJsonLd, productJsonLd } from '@/lib/seo/jsonLd';
 import {
   SITE_NAME,
@@ -80,6 +80,14 @@ export default async function ProductDetailPage({ params }: Props) {
   const related = (bundle.related ?? []).slice(0, 12);
   const hot = (bundle.featured ?? []).slice(0, 12);
 
+  // Backward compat: nếu sản phẩm chưa có mảng images (DB cũ) → dùng image_url đơn.
+  const galleryImages =
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : product.image_url
+        ? [product.image_url]
+        : [];
+
   const jsonLd: unknown[] = [
     productJsonLd(product),
     breadcrumbJsonLd([
@@ -115,18 +123,10 @@ export default async function ProductDetailPage({ params }: Props) {
 
           <div className={`product-detail ${!product.is_active ? 'is-soldout' : ''}`}>
             <div className="product-detail-media">
-              {product.image_url ? (
-                <Image
-                  src={product.image_url}
-                  alt={`${product.name}${product.category_name ? ` — ${product.category_name}` : ''} | ${SITE_NAME}`}
-                  fill
-                  priority
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="product-detail-media-img"
-                />
-              ) : (
-                <div className="product-card-placeholder">No image</div>
-              )}
+              <ProductGallery
+                images={galleryImages}
+                alt={`${product.name}${product.category_name ? ` — ${product.category_name}` : ''} | ${SITE_NAME}`}
+              />
               <SaleBadge product={product} />
               {!product.is_active && (
                 <div className="soldout-overlay">

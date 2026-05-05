@@ -18,7 +18,10 @@ export interface Product {
   price: number;
   sale_price: number | null;
   sale_end_at: string | null;
+  /** Ảnh bìa (mirror `images[0]`). Giữ lại cho backward compat với code cũ. */
   image_url: string | null;
+  /** Gallery nhiều ảnh; phần tử đầu là ảnh bìa. */
+  images: string[];
   colors: string[];
   is_active: boolean;
   is_hero: boolean;

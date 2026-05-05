@@ -10,7 +10,7 @@ export async function GET() {
   const rows = (await sql`
     SELECT p.id, p.category_id, p.name, p.slug, p.price,
            p.sale_price, p.sale_end_at,
-           p.image_url, p.colors,
+           p.image_url, p.images, p.colors,
            p.is_active, p.is_hero, p.featured_rank,
            p.created_at, p.updated_at,
            c.name AS category_name, c.slug AS category_slug
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest) {
   const rows = (await sql`
     SELECT p.id, p.category_id, p.name, p.slug, p.price,
            p.sale_price, p.sale_end_at,
-           p.image_url, p.colors,
+           p.image_url, p.images, p.colors,
            p.is_active, p.is_hero, p.featured_rank,
            p.created_at, p.updated_at,
            c.name AS category_name, c.slug AS category_slug

@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api-client';
 import type { Category, Product } from '@/lib/types';
 import Modal from '@/components/Modal';
-import ImagePicker from '@/components/ImagePicker';
+import MultiImagePicker from '@/components/MultiImagePicker';
 import TagInput from '@/components/TagInput';
 import Switch from '@/components/Switch';
 import Pagination from '@/components/Pagination';
@@ -20,7 +20,7 @@ interface FormState {
   price: string;
   sale_price: string;
   sale_end_at: string;
-  image_url: string;
+  images: string[];
   category_id: string;
   is_active: boolean;
   colors: string[];
@@ -33,7 +33,7 @@ const emptyForm: FormState = {
   price: '',
   sale_price: '',
   sale_end_at: '',
-  image_url: '',
+  images: [],
   category_id: '',
   is_active: true,
   colors: [],
@@ -111,6 +111,12 @@ export default function AdminProductsPage() {
   }
 
   function openEdit(p: Product) {
+    // Backward compat: nếu DB cũ chỉ có image_url đơn, đưa vào mảng images.
+    const initialImages = Array.isArray(p.images) && p.images.length > 0
+      ? p.images
+      : p.image_url
+        ? [p.image_url]
+        : [];
     setForm({
       id: p.id,
       name: p.name,
@@ -119,7 +125,7 @@ export default function AdminProductsPage() {
       price: String(p.price ?? 0),
       sale_price: p.sale_price != null ? String(p.sale_price) : '',
       sale_end_at: toDatetimeLocalValue(p.sale_end_at),
-      image_url: p.image_url ?? '',
+      images: initialImages,
       category_id: String(p.category_id),
       is_active: p.is_active,
       colors: Array.isArray(p.colors) ? p.colors : [],
@@ -132,6 +138,7 @@ export default function AdminProductsPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+    const cover = form.images[0] ?? null;
     const payload: Partial<Product> = {
       name: form.name,
       slug: form.slug || undefined,
@@ -139,7 +146,8 @@ export default function AdminProductsPage() {
       price: Number(form.price || 0),
       sale_price: form.sale_price ? Number(form.sale_price) : null,
       sale_end_at: form.sale_end_at ? fromDatetimeLocalValue(form.sale_end_at) : null,
-      image_url: form.image_url || null,
+      image_url: cover,
+      images: form.images,
       category_id: Number(form.category_id),
       is_active: form.is_active,
       colors: form.colors,
@@ -251,12 +259,19 @@ export default function AdminProductsPage() {
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>
-                    {p.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.image_url} alt={p.name} className="table-thumb" />
-                    ) : (
-                      <div className="table-thumb empty">—</div>
-                    )}
+                    {(() => {
+                      const cover =
+                        (Array.isArray(p.images) && p.images[0]) || p.image_url || '';
+                      const total = Array.isArray(p.images) ? p.images.length : cover ? 1 : 0;
+                      if (!cover) return <div className="table-thumb empty">—</div>;
+                      return (
+                        <div className="table-thumb-wrapper">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={cover} alt={p.name} className="table-thumb" />
+                          {total > 1 && <span className="table-thumb-count">+{total - 1}</span>}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td>
                     <div className="cell-strong">{p.name}</div>
@@ -409,10 +424,10 @@ export default function AdminProductsPage() {
               ))}
             </select>
           </label>
-          <ImagePicker
-            label="Ảnh sản phẩm"
-            value={form.image_url}
-            onChange={(v) => setForm({ ...form, image_url: v })}
+          <MultiImagePicker
+            label="Ảnh sản phẩm (tối đa 10)"
+            value={form.images}
+            onChange={(next) => setForm({ ...form, images: next })}
             disabled={submitting}
           />
           <TagInput

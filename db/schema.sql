@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS products (
   price         NUMERIC(12, 2) NOT NULL DEFAULT 0,
   sale_price    NUMERIC(12, 2),
   sale_end_at   TIMESTAMPTZ,
-  image_url     TEXT,
+  image_url     TEXT,                              -- ảnh bìa, mirror images[0]
+  images        TEXT[] NOT NULL DEFAULT '{}',      -- gallery nhiều ảnh
   colors        TEXT[] NOT NULL DEFAULT '{}',
   is_active     BOOLEAN NOT NULL DEFAULT TRUE,
   is_hero       BOOLEAN NOT NULL DEFAULT FALSE,
@@ -40,11 +41,19 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS featured_rank INTEGER;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS is_hero       BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active     BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url     TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS images        TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS description   TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS colors        TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE products DROP COLUMN IF EXISTS stock;
 ALTER TABLE products DROP COLUMN IF EXISTS sizes;
+
+-- Backfill images cho dữ liệu cũ: bỏ image_url đơn vào mảng images nếu mảng đang rỗng.
+UPDATE products
+SET images = ARRAY[image_url]
+WHERE image_url IS NOT NULL
+  AND image_url <> ''
+  AND (images IS NULL OR cardinality(images) = 0);
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active   ON products(is_active);
